@@ -1,4 +1,4 @@
-﻿/* LANDING PAGE SPECIFIC STYLES */
+/* LANDING PAGE SPECIFIC STYLES */
 body.landing {
     background: var(--white);
     color: var(--black);
@@ -67,9 +67,15 @@ body.landing {
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 180px;
-    height: 60px;
-    background: transparent;
+    width: 280px;
+    height: 100px;
+    background: linear-gradient(
+        to top left,
+        #080a0d 0%,
+        #080a0d 65%,
+        rgba(8, 10, 13, 0.85) 80%,
+        transparent 100%
+    );
     z-index: 10;
     pointer-events: none;
 }

@@ -8,7 +8,13 @@ import '../styles/cards.css';
 import { TOP_PICKS, HDFC_CARDS, SBI_CARDS, AXIS_CARDS, ICICI_CARDS, AMEX_CARDS, KOTAK_CARDS } from '../data/cards';
 
 /* ── Three.js Card Data ──────────────────────────────────────────────────── */
-
+const CARDS_3D = [
+    { issuer: 'HDFC', name: 'Infinia Metal', last4: '3758', colors: ['#0c0c0c', '#1e1e1e', '#0c0c0c'], textColor: '#c9a84c' },
+    { issuer: 'Axis', name: 'Atlas', last4: '6215', colors: ['#001030', '#002070', '#001030'], textColor: '#6ab3e8' },
+    { issuer: 'SBI', name: 'Elite', last4: '0458', colors: ['#001e40', '#004080', '#001e40'], textColor: '#5ba8ff' },
+    { issuer: 'Amex', name: 'Platinum', last4: '1001', colors: ['#0a1a2a', '#163452', '#0c1e36'], textColor: '#6ecff6' },
+    { issuer: 'ICICI', name: 'Emeralde', last4: '3317', colors: ['#1a0030', '#3a0070', '#1a0030'], textColor: '#aaaaff' }
+];
 /* ── Small card visual (CSS 3D tilt) ─────────────────────────────────────── */
 function CardVisual({ style, issuer, issuerColor, pan, cardName }) {
     return (

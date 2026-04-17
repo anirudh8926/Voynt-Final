@@ -2,39 +2,70 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Network } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { fetchStrategyGraph } from '../lib/api';
+import { getCardConfig } from '../data/cards';
 
 /* ── Colour palette ──────────────────────────────────────────────────────── */
 const COLOURS = {
-    goal:         { bg: '#C9A84C', border: '#F0D060', font: '#090708' },
-    card_optimal: { bg: '#97C6B1', border: '#C9A84C', font: '#090708' },
-    card:         { bg: '#1a2e28', border: '#629F86', font: '#97C6B1' },
-    cat_optimal:  { bg: '#203020', border: '#C9A84C', font: '#C9A84C' },
-    category:     { bg: '#141a14', border: '#3a6050', font: '#629F86' },
-    recommended:  { bg: '#1e1a28', border: '#7B6EA0', font: '#A090D0' },
-    month:        { bg: '#0b131a', border: '#244557', font: '#49849e' },
+    goal: { bg: '#9c27b0', border: '#e1bee7', font: '#ffffff' },
+    card_optimal: { bg: '#7b1fa2', border: '#e1bee7', font: '#ffffff' },
+    card: { bg: '#4a148c', border: '#ce93d8', font: '#ffffff' },
+    cat_optimal: { bg: '#7b1fa2', border: '#e1bee7', font: '#ffffff' },
+    category: { bg: '#311b92', border: '#b39ddb', font: '#ffffff' },
+    recommended: { bg: '#512da8', border: '#d1c4e9', font: '#ffffff' },
+    month: { bg: '#4527a0', border: '#b39ddb', font: '#ffffff' },
 };
 
-const EDGE_OPTIMAL   = { color: '#C9A84C', highlight: '#F0D060' };
-const EDGE_NORMAL    = { color: 'rgba(98,159,134,.35)', highlight: '#97C6B1' };
-const EDGE_RECOMMENDED = { color: 'rgba(123,110,160,.5)', highlight: '#A090D0' };
+const EDGE_OPTIMAL = { color: '#ffffff', highlight: '#ffffff' };
+const EDGE_NORMAL = { color: 'rgba(255,255,255,0.4)', highlight: '#ffffff' };
+const EDGE_RECOMMENDED = { color: 'rgba(255,255,255,0.6)', highlight: '#ffffff' };
 
 /* ── Helper: map raw node → vis node ─────────────────────────────────────── */
+const MONTH_PALETTE = [
+    { bg: '#ff5252', border: '#ff8a80' }, { bg: '#ff4081', border: '#ff80ab' },
+    { bg: '#e040fb', border: '#ea80fc' }, { bg: '#7c4dff', border: '#b388ff' },
+    { bg: '#536dfe', border: '#8c9eff' }, { bg: '#448aff', border: '#82b1ff' },
+    { bg: '#40c4ff', border: '#84ffff' }, { bg: '#18ffff', border: '#84ffff' },
+    { bg: '#64ffda', border: '#a7ffeb' }, { bg: '#69f0ae', border: '#b9f6ca' },
+    { bg: '#b2ff59', border: '#ccff90' }, { bg: '#eeff41', border: '#f4ff81' },
+];
+
 function toVisNode(n) {
     const g = n.group || 'category';
-    const c = COLOURS[g] || COLOURS.category;
+    let c = COLOURS[g] || COLOURS.category;
+
+    let tooltip = n.title || n.label;
+    let cfg = null;
+    if (g.startsWith('card')) {
+        const str = n.label || n.id || '';
+        const match = str.match(/^M(\d+):/);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            const idx = (num - 1) % MONTH_PALETTE.length;
+            c = { bg: MONTH_PALETTE[idx].bg, border: MONTH_PALETTE[idx].border, font: '#ffffff' };
+        }
+
+        cfg = getCardConfig(n.label);
+        if (cfg && cfg.highlights) {
+            tooltip += '\n\nHighlights:\n' + cfg.highlights.map(h => '• ' + h).join('\n');
+        }
+    }
+
     return {
         id: n.id,
         label: n.label,
-        x: n.x,
-        y: n.y,
-        fixed: n.fixed,
-        title: n.title || n.label,
-        shape: g === 'goal' ? 'star' : g.startsWith('card') ? 'ellipse' : 'dot',
-        size: n.size || 14,
+        x: n.x !== undefined ? n.x * 1.8 : undefined,
+        y: n.y !== undefined ? n.y * 1.8 : undefined,
+        customTooltip: { 
+            title: n.title || n.label, 
+            highlights: cfg?.highlights || null 
+        },
+        shape: g === 'goal' ? 'star' : g.startsWith('card') ? 'circle' : 'dot',
+        size: n.size ? n.size * 2.5 : 35,
+        margin: { top: 12, right: 20, bottom: 12, left: 20 },
         color: { background: c.bg, border: c.border, highlight: { background: c.border, border: '#fff' } },
         font: {
             color: c.font,
-            size: g === 'goal' ? 14 : g.startsWith('card') ? 11 : 9,
+            size: g === 'goal' ? 24 : g.startsWith('card') ? 20 : 16,
             face: "'IBM Plex Mono', monospace",
             multi: false,
             strokeWidth: 0,
@@ -61,7 +92,7 @@ function toVisEdge(e, idx) {
         color: col,
         font: {
             color: 'rgba(151,198,177,.7)',
-            size: 9,
+            size: 22,
             face: "'IBM Plex Mono', monospace",
             align: 'horizontal',
             strokeWidth: 3,
@@ -90,21 +121,23 @@ const NETWORK_OPTIONS = {
 
 /* ── Legend items ─────────────────────────────────────────────────────────── */
 const LEGEND = [
-    { color: '#C9A84C', label: 'Goal/Start', shape: 'star', border: '#F0D060' },
-    { color: '#1a2e28', label: 'Card usage', shape: 'ellipse', border: '#629F86' },
+    { color: '#9c27b0', label: 'Goal/Start', shape: 'star', border: '#e1bee7' },
+    { color: '#4a148c', label: 'Card usage', shape: 'circle', border: '#ce93d8' },
 ];
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function SimulationGraph({ sessionId }) {
     const containerRef = useRef(null);
-    const networkRef   = useRef(null);
+    const networkRef = useRef(null);
     const [state, setState] = useState('idle'); // idle | loading | ready | error | no_data
     const [meta, setMeta] = useState(null);     // { nodeCount, edgeCount, bestCard }
+    const [tooltipData, setTooltipData] = useState(null);
 
     useEffect(() => {
         if (!sessionId || !containerRef.current) return;
 
         let alive = true;
+        let animId;
         setState('loading');
 
         fetchStrategyGraph(sessionId)
@@ -136,12 +169,68 @@ export default function SimulationGraph({ sessionId }) {
                     setState('ready');
                 });
 
+                // Particle animation on edges
+                networkRef.current.on('afterDrawing', (ctx) => {
+                    const time = Date.now() / 1000;
+                    ctx.save();
+                    rawEdges.forEach(edge => {
+                        const pFrom = networkRef.current.getPositions([edge.from])[edge.from];
+                        const pTo = networkRef.current.getPositions([edge.to])[edge.to];
+                        if (!pFrom || !pTo) return;
+                        
+                        const dist = Math.hypot(pTo.x - pFrom.x, pTo.y - pFrom.y);
+                        const speed = 120; // px per second
+                        const duration = dist / speed;
+                        if (duration === 0) return;
+                        
+                        // Create 2 particles per edge offset in time
+                        [0, 0.5].forEach(offset => {
+                            const progress = ((time + offset * duration) % duration) / duration;
+                            
+                            // Follow a rough bezier curve for smoother look, or just straight line if physics is off
+                            // Since roundness is 0.4 and forceDirection is horizontal:
+                            // We can approximate or just use linear since it's fast
+                            const px = pFrom.x + (pTo.x - pFrom.x) * progress;
+                            const py = pFrom.y + (pTo.y - pFrom.y) * progress;
+                            
+                            ctx.beginPath();
+                            ctx.arc(px, py, edge.is_optimal ? 3 : 2, 0, 2 * Math.PI);
+                            ctx.fillStyle = edge.is_optimal ? '#ffffff' : 'rgba(255,255,255,0.5)';
+                            ctx.shadowColor = edge.is_optimal ? '#fff' : '#e1bee7';
+                            ctx.shadowBlur = edge.is_optimal ? 12 : 6;
+                            ctx.fill();
+                        });
+                    });
+                    ctx.restore();
+                });
+
+                // Tooltip events
+                networkRef.current.on('hoverNode', (params) => {
+                    const node = visNodes.get(params.node);
+                    if (node && node.customTooltip) {
+                        const pos = networkRef.current.canvasToDOM(networkRef.current.getPositions([node.id])[node.id]);
+                        setTooltipData({ x: pos.x, y: pos.y, ...node.customTooltip });
+                    }
+                });
+                networkRef.current.on('blurNode', () => {
+                    setTooltipData(null);
+                });
+
+                // Force 60fps redraw for particles
+                let animId;
+                const renderLoop = () => {
+                    if (networkRef.current) networkRef.current.redraw();
+                    animId = requestAnimationFrame(renderLoop);
+                };
+                renderLoop();
+
                 // Best card name for header
                 const bestNode = rawNodes.find(n => n.id === `card_${best_card_id}`);
                 setMeta({
                     nodeCount: rawNodes.length,
                     edgeCount: rawEdges.length,
                     bestCard: bestNode?.label || 'Unknown',
+                    animId,
                 });
             })
             .catch(err => {
@@ -152,6 +241,7 @@ export default function SimulationGraph({ sessionId }) {
 
         return () => {
             alive = false;
+            if (animId) cancelAnimationFrame(animId);
             networkRef.current?.destroy();
             networkRef.current = null;
         };
@@ -161,13 +251,12 @@ export default function SimulationGraph({ sessionId }) {
         <div style={{ position: 'relative', width: '100%', fontFamily: "'IBM Plex Mono', monospace" }}>
 
             {/* ── Graph canvas ─────────────────────────────────────────── */}
-            <div style={{
+            <div className="graph-container" style={{
                 position: 'relative',
                 width: '100%',
-                height: 560,
-                background: 'radial-gradient(ellipse at center, #0d1810 0%, #080c08 100%)',
+                height: 720,
                 borderRadius: 12,
-                border: '1px solid rgba(151,198,177,.10)',
+                border: '1px solid rgba(156, 39, 176, 0.2)',
                 overflow: 'hidden',
             }}>
                 {/* Loading overlay */}
@@ -274,7 +363,67 @@ export default function SimulationGraph({ sessionId }) {
             </div>
 
             {/* ── Spin keyframes ───────────────────────────────────────── */}
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes moveGrid { to { background-position: 40px 40px; } }
+                .graph-container {
+                    background-color: #060508;
+                    background-image: 
+                        linear-gradient(rgba(156, 39, 176, 0.08) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(156, 39, 176, 0.08) 1px, transparent 1px);
+                    background-size: 40px 40px;
+                    animation: moveGrid 3s linear infinite;
+                    box-shadow: 0 0 40px rgba(156, 39, 176, 0.05) inset;
+                }
+                .glass-tooltip {
+                    position: absolute;
+                    background: rgba(15, 10, 20, 0.75);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border: 1px solid rgba(156, 39, 176, 0.3);
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    color: #fff;
+                    font-size: 11px;
+                    pointer-events: none;
+                    z-index: 100;
+                    transform: translate(-50%, -120%);
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 16px rgba(156, 39, 176, 0.2);
+                    width: max-content;
+                    max-width: 280px;
+                    transition: opacity 0.15s ease;
+                }
+                .glass-tooltip h4 {
+                    margin: 0 0 8px 0;
+                    font-size: 13px;
+                    color: #e1bee7;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    border-bottom: 1px solid rgba(156, 39, 176, 0.3);
+                    padding-bottom: 4px;
+                }
+                .glass-tooltip ul {
+                    margin: 0;
+                    padding-left: 16px;
+                    color: rgba(255,255,255,0.85);
+                }
+                .glass-tooltip li {
+                    margin-bottom: 4px;
+                    line-height: 1.4;
+                }
+            `}</style>
+
+            {/* Custom Tooltip */}
+            {tooltipData && (
+                <div className="glass-tooltip" style={{ left: tooltipData.x, top: tooltipData.y }}>
+                    <h4>{tooltipData.title}</h4>
+                    {tooltipData.highlights ? (
+                        <ul>
+                            {tooltipData.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                        </ul>
+                    ) : null}
+                </div>
+            )}
         </div>
     );
 }

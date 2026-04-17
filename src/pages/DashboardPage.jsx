@@ -113,7 +113,7 @@ function VisualCard({ name, isActive, onClick }) {
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function DashboardPage() {
     const navigate = useNavigate();
-    const { profile, results: ctxResults, sessionId, user, setResults } = useVoynt();
+    const { profile, results: ctxResults, sessionId, user, setResults, setUser } = useVoynt();
 
     const [results, setLocalResults] = useState(null);
     const [polling, setPolling] = useState(false);
@@ -211,6 +211,8 @@ export default function DashboardPage() {
 
     async function handleLogout() {
         await supabase.auth.signOut();
+        sessionStorage.clear();
+        setUser(null);
         navigate('/auth');
     }
 

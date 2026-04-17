@@ -22,7 +22,7 @@ export default function FeatureGraph({ spend, cards }) {
                 nodes: {
                     borderWidth: 1,
                     shape: 'dot',
-                    font: { color: 'rgba(151,198,177,.8)', size: 10, face: "'IBM Plex Mono', monospace", multi: 'html' }
+                    font: { color: 'rgba(151,198,177,.8)', size: 14, face: "'IBM Plex Mono', monospace", multi: 'html' }
                 },
                 edges: {
                     color: { color: 'rgba(98,159,134,.3)', highlight: '#97C6B1' },

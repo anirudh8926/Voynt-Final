@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const VoyntContext = createContext(null);
 
@@ -12,17 +13,18 @@ const SS_KEYS = {
 
 function loadFromStorage() {
     try {
+        const fName = sessionStorage.getItem(SS_KEYS.firstName);
+        const lName = sessionStorage.getItem(SS_KEYS.lastName);
+        const user = fName || lName ? { firstName: fName || '', lastName: lName || '' } : null;
+
         return {
             profile: JSON.parse(sessionStorage.getItem(SS_KEYS.profile) || 'null'),
             results: JSON.parse(sessionStorage.getItem(SS_KEYS.results) || 'null'),
             sessionId: sessionStorage.getItem(SS_KEYS.sessionId) || null,
-            user: {
-                firstName: sessionStorage.getItem(SS_KEYS.firstName) || '',
-                lastName: sessionStorage.getItem(SS_KEYS.lastName) || '',
-            },
+            user,
         };
     } catch {
-        return { profile: null, results: null, sessionId: null, user: { firstName: '', lastName: '' } };
+        return { profile: null, results: null, sessionId: null, user: null };
     }
 }
 
@@ -41,15 +43,38 @@ export function VoyntProvider({ children }) {
         if (state.sessionId) sessionStorage.setItem(SS_KEYS.sessionId, state.sessionId);
         if (state.user?.firstName) sessionStorage.setItem(SS_KEYS.firstName, state.user.firstName);
         if (state.user?.lastName) sessionStorage.setItem(SS_KEYS.lastName, state.user.lastName);
-    }, [state]);
+    }, [state.profile, state.results, state.sessionId, state.user]);
+
+    // Sync user state with Supabase Auth
+    const [sessionChecked, setSessionChecked] = useState(false);
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user?.user_metadata) {
+                setState(s => ({ ...s, user: { firstName: session.user.user_metadata.first_name || '', lastName: session.user.user_metadata.last_name || '' } }));
+            } else {
+                setState(s => ({ ...s, user: null }));
+            }
+            setSessionChecked(true);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user?.user_metadata) {
+                setState(s => ({ ...s, user: { firstName: session.user.user_metadata.first_name || '', lastName: session.user.user_metadata.last_name || '' } }));
+            } else {
+                setState(s => ({ ...s, user: null }));
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     const setProfile = (profile) => setState((s) => ({ ...s, profile }));
     const setResults = (results) => setState((s) => ({ ...s, results }));
     const setSessionId = (sessionId) => setState((s) => ({ ...s, sessionId }));
-    const setUser = (user) => setState((s) => ({ ...s, user: { ...s.user, ...user } }));
+    const setUser = (user) => setState((s) => ({ ...s, user: user ? { ...(s.user || {}), ...user } : null }));
 
     return (
-        <VoyntContext.Provider value={{ ...state, setProfile, setResults, setSessionId, setUser }}>
+        <VoyntContext.Provider value={{ ...state, sessionChecked, setProfile, setResults, setSessionId, setUser }}>
             {children}
         </VoyntContext.Provider>
     );
