@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useVoynt } from '../context/VoyntContext';
 import Spline from '@splinetool/react-spline';
 import Ticker from '../components/Ticker';
 import '../styles/landing.css';
@@ -7,6 +8,7 @@ import '../styles/landing.css';
 const SPLINE_URL = 'https://prod.spline.design/0ZvQ3aEzR6eD7jDg/scene.splinecode';
 
 export default function LandingPage() {
+    const { user } = useVoynt();
     const navRef = useRef(null);
 
     useEffect(() => {
@@ -31,8 +33,14 @@ export default function LandingPage() {
                     <a className="nav-link" href="#">Sandbox</a>
                 </div>
                 <div className="nav-right">
-                    <Link className="btn-ghost" to="/auth">Log in</Link>
-                    <Link className="btn-primary" to="/auth#signup">Sign up free</Link>
+                    {user ? (
+                        <Link className="btn-primary" to="/dashboard">Go to Dashboard →</Link>
+                    ) : (
+                        <>
+                            <Link className="btn-ghost" to="/auth">Log in</Link>
+                            <Link className="btn-primary" to="/auth#signup">Sign up free</Link>
+                        </>
+                    )}
                 </div>
             </nav>
 
@@ -51,7 +59,11 @@ export default function LandingPage() {
                     <span className="hero-logo">Voy<span className="ln">n</span>t</span>
                     <p className="hero-headline">Turn your spending into a<br /><span className="accent">reward strategy.</span></p>
                     <div className="hero-cta">
-                        <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                        {user ? (
+                            <Link className="btn-hero" to="/dashboard">Go to Dashboard <span className="arrow">→</span></Link>
+                        ) : (
+                            <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                        )}
                         <Link className="btn-outline" to="/how-it-works">See how it works</Link>
                     </div>
                 </div>
@@ -66,7 +78,11 @@ export default function LandingPage() {
                     <div className="eyebrow">Credit card intelligence</div>
                     <p className="subline">Tell Voynt your goal — a trip, a purchase, a target.<br />Get a <strong>precision credit card plan</strong> with a real confidence score, built on Monte Carlo simulation.</p>
                     <div className="page2-cta">
-                        <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                        {user ? (
+                            <Link className="btn-hero" to="/dashboard">Go to Dashboard <span className="arrow">→</span></Link>
+                        ) : (
+                            <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                        )}
                         <span className="cta-note">No card required &nbsp;·&nbsp; 2 min setup</span>
                     </div>
                 </div>
@@ -213,7 +229,11 @@ export default function LandingPage() {
             <div className="cta-strip">
                 <h2>Ready to earn <span>smarter</span>?</h2>
                 <p>Start with your goal. Voynt does the rest — in about 2 minutes.</p>
-                <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                {user ? (
+                    <Link className="btn-hero" to="/dashboard">Go to Dashboard <span className="arrow">→</span></Link>
+                ) : (
+                    <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                )}
                 <span className="cta-strip-note">No credit card required &nbsp;·&nbsp; Free to use</span>
             </div>
 

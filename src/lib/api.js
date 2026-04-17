@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE !== undefined ? import.meta.env.VITE_API_BASE : 'http://localhost:8000';
 
 export function analyzeProfile(payload) {
   return fetch(API_BASE + '/api/analyze', {
@@ -56,6 +56,28 @@ export function runSandbox(sessionId, spendOverrides, selectedCards) {
     body: JSON.stringify(payload),
   }).then((res) => {
     if (!res.ok) return res.text().then((t) => { throw new Error(t || 'Failed to run sandbox'); });
+    return res.json();
+  });
+}
+
+export function fetchExpenditureGraph(totalSpend, cards) {
+  const payload = {
+    total_spend: parseFloat(totalSpend) || 50000,
+    cards: cards || [],
+  };
+  return fetch(API_BASE + '/api/graph/simulation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then((res) => {
+    if (!res.ok) return res.text().then((t) => { throw new Error(t || 'Failed to fetch graph'); });
+    return res.json();
+  });
+}
+
+export function fetchStrategyGraph(sessionId) {
+  return fetch(API_BASE + '/api/graph/' + encodeURIComponent(sessionId)).then((res) => {
+    if (!res.ok) return res.text().then((t) => { throw new Error(t || 'Failed to fetch strategy graph'); });
     return res.json();
   });
 }

@@ -26,7 +26,13 @@ const CARDS = ['HDFC Regalia Gold', 'Axis Atlas', 'Amex MRCC', 'SBI SimplyCLICK'
 export default function AuthPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { setUser } = useVoynt();
+    const { user, setUser } = useVoynt();
+
+    useEffect(() => {
+        if (user) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, navigate]);
     const [mode, setMode] = useState(location.hash === '#signup' ? 'signup' : 'login');
     const [step, setStep] = useState(1);
     const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', goal: '', card: '' });

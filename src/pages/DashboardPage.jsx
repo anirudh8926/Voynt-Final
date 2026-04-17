@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useVoynt } from '../context/VoyntContext';
 import { supabase } from '../lib/supabase';
 import { pollStatus, getResults } from '../lib/api';
+import { getCardConfig } from '../data/cards';
+import SimulationGraph from '../components/SimulationGraph';
 import '../styles/dashboard.css';
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
@@ -67,21 +69,6 @@ function readCardsOwned() {
     } catch { return []; }
 }
 
-async function fetchGeminiFeatures(cardName) {
-    const res = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: `Give me 4 key features of the ${cardName} credit card for Indian users. Respond with ONLY a JSON array of 4 short strings. No markdown, no explanation, just the array.` }] }]
-        }),
-    });
-    if (!res.ok) throw new Error('Gemini error');
-    const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    const match = text.match(/\[[\s\S]*?\]/);
-    return match ? JSON.parse(match[0]) : [];
-}
-
 /* ─── Visual Credit Card ─────────────────────────────────────────────────── */
 function VisualCard({ name, isActive, onClick }) {
     const { bank, accent, suffix } = getCardMeta(name);
@@ -132,7 +119,6 @@ export default function DashboardPage() {
     const [polling, setPolling] = useState(false);
     const [history, setHistory] = useState(loadHistory);
     const [activeCard, setActiveCard] = useState(null);
-    const [cardFeatures, setCardFeatures] = useState({});
 
     const scoreCircleRef = useRef(null);
     const scoreNumRef = useRef(null);
@@ -140,10 +126,19 @@ export default function DashboardPage() {
     const firstName = user?.firstName || sessionStorage.getItem('voynt_firstName') || 'there';
     const fullName = (user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : (user?.firstName || 'User');
     const initial = (user?.firstName?.[0] || 'U').toUpperCase();
-    const cardsOwned = readCardsOwned();
     const strategy = results?.strategy;
     const yieldRes = results?.yield_result;
     const latestSim = history[0] || null;
+
+    // Determine derived cards
+    let displayCards = [];
+    if (strategy?.recommended_cards) {
+        // Dedup and extract card names directly from the optimal sequence
+        displayCards = Array.from(new Set(strategy.recommended_cards.map(c => c.card_name)));
+    } else if (!latestSim && !polling) {
+        // Fallback to onboarding state only if they've never simulated at all
+        displayCards = readCardsOwned();
+    }
 
     /* ── Load results on mount ──────────────────────────────────────────── */
     useEffect(() => {
@@ -209,17 +204,9 @@ export default function DashboardPage() {
         });
     }
 
-    async function handleCardClick(name) {
+    function handleCardClick(name) {
         if (activeCard === name) { setActiveCard(null); return; }
         setActiveCard(name);
-        if (cardFeatures[name]) return;
-        setCardFeatures(f => ({ ...f, [name]: 'loading' }));
-        try {
-            const features = await fetchGeminiFeatures(name);
-            setCardFeatures(f => ({ ...f, [name]: features }));
-        } catch {
-            setCardFeatures(f => ({ ...f, [name]: 'error' }));
-        }
     }
 
     async function handleLogout() {
@@ -307,38 +294,54 @@ export default function DashboardPage() {
                         {/* ── Your Current Cards ── */}
                         <div className="panel">
                             <div className="panel-header">
-                                <div className="panel-title">Your Current Cards</div>
-                                <div className="panel-badge">{cardsOwned.length} card{cardsOwned.length !== 1 ? 's' : ''}</div>
+                                <div className="panel-title">Strategy Card Stack</div>
+                                <div className="panel-badge">{displayCards.length} card{displayCards.length !== 1 ? 's' : ''}</div>
                             </div>
-                            {cardsOwned.length === 0 ? (
+                            {displayCards.length === 0 ? (
                                 <div style={{ fontSize: 12, color: 'rgba(151,198,177,.3)', lineHeight: 1.8 }}>
-                                    No cards found. Clear your session and redo onboarding to add cards.
+                                    {polling ? 'Extracting cards from strategy...' : 'Run a simulation to view your optimal card stack.'}
                                 </div>
                             ) : (
-                                cardsOwned.map((card, idx) => {
+                                displayCards.map((card, idx) => {
                                     const name = typeof card === 'string' ? card : card.name;
                                     const isActive = activeCard === name;
-                                    const features = cardFeatures[name];
+                                    const config = getCardConfig(name);
+                                    
                                     return (
                                         <div key={idx} style={{ marginBottom: 14 }}>
                                             <VisualCard name={name} isActive={isActive} onClick={handleCardClick} />
-                                            {isActive && (
-                                                <div style={{ borderLeft: '2px solid rgba(98,159,134,.2)', marginLeft: 8, paddingLeft: 14, paddingTop: 10, paddingBottom: 4, marginTop: 2 }}>
-                                                    {features === 'loading' && (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'rgba(151,198,177,.4)' }}>
-                                                            <div className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 1.5 }} />
-                                                            Fetching features…
-                                                        </div>
-                                                    )}
-                                                    {features === 'error' && (
-                                                        <div style={{ fontSize: 10, color: 'rgba(220,80,80,.6)' }}>Could not load features.</div>
-                                                    )}
-                                                    {Array.isArray(features) && features.map((f, i) => (
-                                                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 7 }}>
+                                            {isActive && config && (
+                                                <div style={{ borderLeft: '2px solid rgba(98,159,134,.4)', marginLeft: 8, paddingLeft: 14, paddingTop: 12, paddingBottom: 8, marginTop: 2 }}>
+                                                    <div style={{ fontSize: 13, color: 'var(--white)', fontFamily: "'BL Melody',sans-serif", fontWeight: 800, marginBottom: 8 }}>{config.title}</div>
+                                                    
+                                                    {config.highlights && config.highlights.map((h, i) => (
+                                                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
                                                             <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--beauty)', flexShrink: 0, marginTop: 5 }} />
-                                                            <span style={{ fontSize: 10, color: 'rgba(151,198,177,.65)', lineHeight: 1.5 }}>{f}</span>
+                                                            <span style={{ fontSize: 11, color: 'rgba(151,198,177,.8)', lineHeight: 1.5 }}>{h}</span>
                                                         </div>
                                                     ))}
+                                                    
+                                                    {config.stats && (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginTop: 12, background: 'rgba(98,159,134,.05)', border: '1px solid rgba(98,159,134,.1)', padding: 10, borderRadius: 8 }}>
+                                                            {config.stats.map(([val, lbl], i) => (
+                                                                <div key={i}>
+                                                                    <div style={{ color: 'var(--beauty)', fontFamily: "'BL Melody',sans-serif", fontWeight: 800, fontSize: 16 }}>{val}</div>
+                                                                    <div style={{ fontSize: 8, color: 'rgba(151,198,177,.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>{lbl}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+                                                        {config.tags && config.tags.map(t => (
+                                                            <span key={t} style={{ fontSize: 9, color: 'rgba(151,198,177,.5)', border: '1px solid rgba(151,198,177,.2)', padding: '2px 8px', borderRadius: 4, letterSpacing: '1px', textTransform: 'uppercase' }}>{t}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {isActive && !config && (
+                                                <div style={{ borderLeft: '2px solid rgba(98,159,134,.2)', marginLeft: 8, paddingLeft: 14, paddingTop: 10, paddingBottom: 4, marginTop: 2, fontSize: 11, color: 'rgba(151,198,177,.4)' }}>
+                                                    Detailed info not available for this card.
                                                 </div>
                                             )}
                                         </div>
@@ -403,6 +406,24 @@ export default function DashboardPage() {
                                 </>
                             )}
                         </div>
+                    </div>
+
+                    {/* ── Strategy Graph ── */}
+                    <div className="panel" style={{ marginTop: 20 }}>
+                        <div className="panel-header">
+                            <div className="panel-title">Strategy Path Graph</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {results?.strategy && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: 'rgba(151,198,177,.8)', letterSpacing: '1px', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(151,198,177,.05)', border: '1px solid rgba(151,198,177,.25)' }}>
+                                        <span>💳</span> Card Stack Timeline
+                                    </div>
+                                )}
+                                <div className="panel-badge">{results?.strategy ? 'Live' : 'Awaiting simulation'}</div>
+                            </div>
+                        </div>
+                        <SimulationGraph
+                            sessionId={results?.strategy ? (sessionId || sessionStorage.getItem('voynt_session_id')) : null}
+                        />
                     </div>
 
                     {/* History table — only when 2+ runs exist */}

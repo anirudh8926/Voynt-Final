@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useVoynt } from '../context/VoyntContext';
 import Ticker from '../components/Ticker';
 import '../styles/hiw.css';
 import '../styles/landing.css';
@@ -51,6 +52,7 @@ const STEPS = [
 ];
 
 export default function HowItWorksPage() {
+    const { user } = useVoynt();
     return (
         <div style={{ background: '#FFFFFF', color: '#090708' }}>
             <Ticker />
@@ -63,8 +65,14 @@ export default function HowItWorksPage() {
                     <a className="nav-link" href="#">Cards</a>
                 </div>
                 <div className="nav-right">
-                    <Link className="btn-ghost" to="/auth">Log in</Link>
-                    <Link className="btn-primary" to="/auth#signup">Sign up free</Link>
+                    {user ? (
+                        <Link className="btn-primary" to="/dashboard">Go to Dashboard →</Link>
+                    ) : (
+                        <>
+                            <Link className="btn-ghost" to="/auth">Log in</Link>
+                            <Link className="btn-primary" to="/auth#signup">Sign up free</Link>
+                        </>
+                    )}
                 </div>
             </nav>
 
@@ -96,7 +104,11 @@ export default function HowItWorksPage() {
             <section className="cta-section">
                 <h2>Ready to earn <span>smarter</span>?</h2>
                 <p>Takes about 2 minutes. No credit card required.</p>
-                <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                {user ? (
+                    <Link className="btn-hero" to="/dashboard">Go to Dashboard <span className="arrow">→</span></Link>
+                ) : (
+                    <Link className="btn-hero" to="/auth#signup">Start Planning <span className="arrow">→</span></Link>
+                )}
                 <div style={{ marginTop: 16, fontSize: 11, color: 'var(--storm)', fontFamily: "'IBM Plex Mono',monospace" }}>Free to use &nbsp;·&nbsp; No card required</div>
             </section>
 

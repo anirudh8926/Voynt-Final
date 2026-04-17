@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVoynt } from '../context/VoyntContext';
 import { analyzeProfile, pollStatus, getResults } from '../lib/api';
+import SimulationGraph from '../components/SimulationGraph';
 import '../styles/dashboard.css';
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
@@ -224,6 +225,19 @@ export default function SimulationPage() {
                                     <div style={{ fontSize: 12, color: 'rgba(151,198,177,.65)', lineHeight: 1.7 }}>{simResults.ai_narrative}</div>
                                 </div>
                             )}
+
+                            {/* Strategy Graph */}
+                            <div className="panel" style={{ marginBottom: 20 }}>
+                                <div className="panel-header">
+                                    <div className="panel-title">Strategy Path Graph</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: 'rgba(151,198,177,.8)', letterSpacing: '1px', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(151,198,177,.05)', border: '1px solid rgba(151,198,177,.25)' }}>
+                                            <span>💳</span> Card Stack Timeline
+                                        </div>
+                                    </div>
+                                </div>
+                                <SimulationGraph sessionId={sessionStorage.getItem('voynt_session_id')} />
+                            </div>
 
                             {/* Recommended Cards */}
                             <div className="panel" style={{ marginBottom: 20 }}>

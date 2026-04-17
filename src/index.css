@@ -1,8 +1,64 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--black:#090708;--storm:#636364;--white:#FFFFFF;--skeptic:#CAE9D9;--pale:#97C6B1;--beauty:#629F86;--border:rgba(9,7,8,0.09);--border2:rgba(9,7,8,0.16)}
-html{scroll-behavior:smooth}
-body{overflow-x:hidden;cursor:none;font-family:'IBM Plex Mono',monospace}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.5rem;
+
+    --black: #090708;
+    --storm: #636364;
+    --white: #FFFFFF;
+    --border2: rgba(9, 7, 8, 0.16);
+    --beauty: #629F86;
+    --pale: #97C6B1;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+    background: 
+      radial-gradient(120% 100% at 0% 0%, rgba(37, 99, 235, 0.15) 0%, transparent 100%),
+      radial-gradient(120% 100% at 100% 0%, rgba(249, 115, 22, 0.12) 0%, transparent 100%),
+      radial-gradient(120% 100% at 50% 100%, rgba(147, 51, 234, 0.15) 0%, transparent 100%),
+      #050508;
+    background-attachment: fixed;
+  }
+}
 #dot{position:fixed;pointer-events:none;z-index:9999;width:8px;height:8px;border-radius:50%;background:var(--beauty);transform:translate(-50%,-50%);left:-40px;top:-40px;transition:opacity .2s}
 #ring{position:fixed;pointer-events:none;z-index:9998;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(98,159,134,.4);transform:translate(-50%,-50%);left:-40px;top:-40px}
 .ticker{position:fixed;top:0;left:0;right:0;z-index:60;background:var(--black);border-bottom:1px solid rgba(151,198,177,.16);padding:6px 0;overflow:hidden;white-space:nowrap;backdrop-filter:blur(10px)}
